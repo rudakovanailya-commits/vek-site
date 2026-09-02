@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 const MAILTO = 'ooovek17@gmail.com'
 const MAIL_SUBJECT = 'Заявка на расчёт изготовления детали'
+const imagePath = (name) => `${import.meta.env.BASE_URL}images/${name}`
 
 const navItems = [
   { href: '#services', label: 'Услуги' },
@@ -101,32 +102,32 @@ const measuringBrands = ['Mahr', 'Mitutoyo', 'Tesa', 'Bowers', 'Planolith', 'Ori
 
 const works = [
   {
-    src: '/images/work-1.jpg',
+    src: imagePath("work-1.jpg"),
     title: 'Токарно-фрезерная обработка',
     alt: 'Пример токарно-фрезерной обработки деталей',
   },
   {
-    src: '/images/work-2.jpg',
+    src: imagePath("work-2.jpg"),
     title: 'Детали сложной формы',
     alt: 'Пример деталей сложной формы',
   },
   {
-    src: '/images/work-3.jpg',
+    src: imagePath("work-3.jpg"),
     title: 'Корпусные детали',
     alt: 'Пример корпусной детали',
   },
   {
-    src: '/images/work-4.jpg',
+    src: imagePath("work-4.jpg"),
     title: 'Фрезерная обработка',
     alt: 'Пример фрезерной обработки детали',
   },
   {
-    src: '/images/work-5.jpg',
+    src: imagePath("work-5.jpg"),
     title: 'Изготовление по КД заказчика',
     alt: 'Пример изготовления по документации заказчика',
   },
   {
-    src: '/images/work-8.jpg',
+    src: imagePath("work-8.jpg"),
     title: 'Контроль геометрии',
     alt: 'Пример контроля геометрии детали',
   },
@@ -134,17 +135,17 @@ const works = [
 
 const equipmentPhotos = [
   {
-    src: '/images/machine-closeup.jpg',
+    src: imagePath("machine-closeup.jpg"),
     alt: 'Токарно-фрезерный центр на производственном участке ООО ВЕК',
     caption: 'Токарно-фрезерный центр',
   },
   {
-    src: '/images/machine-haas-vf2ss.jpg',
+    src: imagePath("machine-haas-vf2ss.jpg"),
     alt: 'Фрезерный обрабатывающий центр HAAS VF-2SS',
     caption: 'Фрезерный центр HAAS VF-2SS',
   },
   {
-    src: '/images/machine-rotary-table.jpg',
+    src: imagePath("machine-rotary-table.jpg"),
     alt: 'Наклонно-поворотный стол HAAS',
     caption: 'Наклонно-поворотный стол HAAS',
   },
@@ -281,7 +282,7 @@ function Header() {
       <Container className="flex h-16 items-center justify-between gap-3">
         <a href="#top" className="flex min-w-0 shrink-0 items-center gap-2.5" onClick={closeMenu}>
           <img
-            src="/images/logo-vek.png"
+            src={imagePath("logo-vek.png")}
             alt="ООО «ВЕК»"
             className="logo-img h-8 w-auto max-w-[148px] object-contain mix-blend-lighten sm:h-9 lg:h-10"
           />
@@ -359,7 +360,11 @@ function Header() {
 
 function Hero() {
   return (
-    <section id="top" className="hero-process relative overflow-hidden pt-16 text-white">
+    <section
+      id="top"
+      className="hero-process relative overflow-hidden pt-16 text-white"
+      style={{ backgroundImage: `url(${imagePath("hero-machining-bg.png")})` }}
+    >
       <div className="hero-glow" aria-hidden="true" />
       <div className="hero-process-overlay pointer-events-none absolute inset-0" aria-hidden="true" />
       <Container className="relative z-10 py-10 sm:py-11 lg:py-[3.25rem]">
@@ -458,7 +463,7 @@ function Equipment() {
         </div>
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-rows-3">
           <EquipmentShot
-            src="/images/hero-production.jpg"
+            src={imagePath("hero-production.jpg")}
             alt="Общий вид станочного парка ООО ВЕК"
             caption="Общий вид станочного парка"
             className="aspect-[16/10] min-h-[200px] sm:col-span-3 lg:col-span-2 lg:row-span-3 lg:aspect-auto lg:min-h-0 lg:h-full"
@@ -585,7 +590,7 @@ function Quality() {
           </div>
           <div className="aspect-[16/10] h-full overflow-hidden rounded-md border border-steel-200 shadow-card lg:aspect-auto">
             <img
-              src="/images/quality-control.png"
+              src={imagePath("quality-control.png")}
               alt="Измерительный контроль деталей"
               className="h-full w-full object-cover"
             />
@@ -679,7 +684,7 @@ function About() {
           </div>
         </div>
         <SitePhoto
-          src="/images/company-production.jpg"
+          src={imagePath("company-production.jpg")}
           alt="Производственный участок ООО ВЕК"
           overlay
           className="min-h-[220px] lg:min-h-[300px]"

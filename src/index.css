@@ -25,7 +25,6 @@
 @layer components {
   .hero-process {
     background-color: #080c12;
-    background-image: url('/images/hero-machining-bg.png');
     background-repeat: no-repeat;
     background-size: cover;
     background-position: center right;
