@@ -279,24 +279,24 @@ function Header() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-graphite-900/85 backdrop-blur-md">
-      <Container className="flex h-16 items-center justify-between gap-3">
-        <a href="#top" className="flex min-w-0 shrink-0 items-center gap-2.5" onClick={closeMenu}>
-          <img
-            src={imagePath("logo-vek.png")}
-            alt="ООО «ВЕК»"
-            className="logo-img h-8 w-auto max-w-[148px] object-contain mix-blend-lighten sm:h-9 lg:h-10"
-          />
-          <span className="hidden text-[11px] leading-tight text-steel-400 sm:block">
-            Механическая обработка
+      <Container className="flex h-[5.25rem] items-center justify-between gap-4 lg:gap-5">
+        <a href="#top" className="logo-block shrink-0" onClick={closeMenu}>
+          <span className="logo-plate">
+            <img
+              src={imagePath("logo-vek.png")}
+              alt="ООО «ВЕК»"
+              className="logo-img h-[34px] w-auto max-w-[118px] object-contain mix-blend-lighten lg:h-[42px] lg:max-w-[154px]"
+            />
+            <span className="logo-plate-caption">Механическая обработка</span>
           </span>
         </a>
 
-        <nav className="hidden items-center gap-5 lg:flex xl:gap-6" aria-label="Основное меню">
+        <nav className="hidden shrink-0 items-center gap-3 lg:flex xl:gap-5" aria-label="Основное меню">
           {navItems.map((item) => (
             <a
               key={item.href}
               href={item.href}
-              className="whitespace-nowrap text-sm text-steel-300 transition-colors hover:text-white"
+              className="whitespace-nowrap text-[15px] font-medium text-[#C7D0DA] transition-colors hover:text-white xl:text-base"
             >
               {item.label}
             </a>
@@ -306,13 +306,13 @@ function Header() {
         <div className="flex shrink-0 items-center gap-2">
           <a
             href="#request"
-            className="btn-primary hidden rounded-sm bg-accent px-3.5 py-2 text-sm font-medium text-white hover:bg-accent-hover lg:inline-flex"
+            className="btn-primary hidden whitespace-nowrap rounded-sm bg-accent px-4 py-2.5 text-base font-medium text-white hover:bg-accent-hover lg:inline-flex"
           >
             Отправить чертёж
           </a>
           <button
             type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-sm border border-white/15 text-white lg:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-white/15 text-white lg:hidden"
             aria-expanded={open}
             aria-label={open ? 'Закрыть меню' : 'Открыть меню'}
             onClick={() => setOpen((value) => !value)}
@@ -338,7 +338,7 @@ function Header() {
               <a
                 key={item.href}
                 href={item.href}
-                className="rounded-sm px-2 py-2.5 text-sm text-steel-200 hover:bg-white/5 hover:text-white"
+                className="rounded-sm px-2 py-2.5 text-base font-medium text-[#C7D0DA] hover:bg-white/5 hover:text-white"
                 onClick={closeMenu}
               >
                 {item.label}
@@ -363,7 +363,7 @@ function Hero() {
     <section
       id="top"
       className="hero-process relative overflow-hidden pt-16 text-white"
-      style={{ backgroundImage: `url(${imagePath("hero-machining-bg.png")})` }}
+      style={{ '--hero-image': `url(${imagePath("hero-machining-bg.png")})` }}
     >
       <div className="hero-glow" aria-hidden="true" />
       <div className="hero-process-overlay pointer-events-none absolute inset-0" aria-hidden="true" />

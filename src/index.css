@@ -5,7 +5,7 @@
 @layer base {
   html {
     scroll-behavior: smooth;
-    scroll-padding-top: 5.5rem;
+    scroll-padding-top: 6rem;
   }
 
   body {
@@ -18,30 +18,44 @@
   }
 
   section[id] {
-    scroll-margin-top: 5.5rem;
+    scroll-margin-top: 6rem;
   }
 }
 
 @layer components {
   .hero-process {
     background-color: #080c12;
+    isolation: isolate;
+  }
+
+  .hero-process::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-color: #080c12;
+    background-image: var(--hero-image);
     background-repeat: no-repeat;
     background-size: cover;
     background-position: center right;
+    filter: brightness(1.12) contrast(1.04) saturate(1.05);
   }
 
   .hero-process-overlay {
     position: absolute;
     inset: 0;
+    z-index: 1;
     background:
+      radial-gradient(circle at 22% 40%, rgba(35, 100, 190, 0.12), transparent 34%),
       linear-gradient(
         90deg,
-        rgba(10, 14, 20, 0.94) 0%,
-        rgba(10, 14, 20, 0.84) 38%,
-        rgba(10, 14, 20, 0.55) 65%,
-        rgba(10, 14, 20, 0.28) 100%
+        rgba(10, 14, 20, 0.88) 0%,
+        rgba(10, 14, 20, 0.78) 38%,
+        rgba(10, 14, 20, 0.45) 65%,
+        rgba(10, 14, 20, 0.16) 100%
       ),
-      rgba(8, 12, 18, 0.25);
+      rgba(8, 12, 18, 0.15);
   }
 
   .hero-glow {
@@ -111,8 +125,54 @@
       0 8px 20px rgba(30, 90, 168, 0.16);
   }
 
+  .logo-plate {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    padding: 6px 10px 7px;
+    border-radius: 11px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(8, 12, 18, 0.35);
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.22),
+      0 0 18px rgba(35, 100, 190, 0.16);
+  }
+
+  .logo-plate-caption {
+    margin-top: 4px;
+    max-width: 100%;
+    overflow: hidden;
+    text-align: center;
+    font-size: 11px;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    color: #b8c3cf;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  @media (min-width: 1024px) {
+    .logo-plate-caption {
+      font-size: 12px;
+      letter-spacing: 0.05em;
+    }
+  }
+
+  @media (max-width: 379px) {
+    .logo-plate-caption {
+      display: none;
+    }
+  }
+
   .logo-img {
-    opacity: 0.92;
+    opacity: 0.96;
+    filter:
+      brightness(1.18)
+      contrast(1.12)
+      saturate(1.08)
+      drop-shadow(0 0 8px rgba(120, 170, 220, 0.22));
     transition:
       opacity 250ms ease,
       filter 250ms ease;
@@ -120,21 +180,30 @@
 
   a:hover .logo-img {
     opacity: 1;
-    filter: drop-shadow(0 0 10px rgba(30, 90, 168, 0.32));
+    filter:
+      brightness(1.18)
+      contrast(1.12)
+      saturate(1.08)
+      drop-shadow(0 0 10px rgba(120, 170, 220, 0.28));
   }
 
   @media (max-width: 767px) {
-    .hero-process {
+    .logo-plate {
+      padding: 5px 8px 6px;
+    }
+
+    .hero-process::before {
       background-position: center;
     }
 
     .hero-process-overlay {
       background:
+        radial-gradient(circle at 22% 40%, rgba(35, 100, 190, 0.1), transparent 34%),
         linear-gradient(
           90deg,
-          rgba(10, 14, 20, 0.96) 0%,
-          rgba(10, 14, 20, 0.92) 40%,
-          rgba(10, 14, 20, 0.82) 100%
+          rgba(10, 14, 20, 0.92) 0%,
+          rgba(10, 14, 20, 0.88) 40%,
+          rgba(10, 14, 20, 0.78) 100%
         ),
         rgba(8, 12, 18, 0.4);
     }
