@@ -648,6 +648,31 @@ function Process() {
             </li>
           ))}
         </ol>
+        <div className="mt-5 flex flex-col gap-4 border border-steel-200 bg-white p-4 shadow-card lg:flex-row lg:items-center lg:justify-between lg:gap-8 lg:px-5 lg:py-4">
+          <div className="min-w-0 lg:max-w-xl">
+            <p className="text-base font-semibold text-graphite-900">
+              Готовы передать задачу на оценку?
+            </p>
+            <p className="mt-1.5 text-sm leading-relaxed text-steel-500">
+              Отправьте чертёж, КД, ТЗ или иную исходную документацию — специалисты
+              ООО «ВЕК» оценят возможность изготовления.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+            <a
+              href="#request"
+              className="btn-primary inline-flex items-center justify-center rounded-sm bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover"
+            >
+              Отправить чертёж на расчёт
+            </a>
+            <a
+              href={`mailto:${MAILTO}?subject=${encodeURIComponent(MAIL_SUBJECT)}`}
+              className="inline-flex items-center justify-center rounded-sm border border-accent/45 bg-white px-4 py-2.5 text-sm font-medium text-accent transition-colors hover:border-accent hover:bg-accent/5"
+            >
+              Написать на e-mail
+            </a>
+          </div>
+        </div>
       </Container>
     </section>
   )
