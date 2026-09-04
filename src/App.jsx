@@ -58,18 +58,15 @@ function isAllowedUploadName(name) {
 
 function formatFileSize(bytes) {
   const n = Number(bytes) || 0
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} КБ`
+  if (n < 1024 * 1024) {
+    const kb = n / 1024
+    return `${kb >= 10 ? Math.round(kb) : kb.toFixed(1)} КБ`
+  }
   return `${(n / (1024 * 1024)).toFixed(1)} МБ`
 }
 
 function isSameFile(a, b) {
   return a.name === b.name && a.size === b.size
-}
-
-function fileIssue(file) {
-  if (!isAllowedUploadName(file.name)) return 'Этот формат нельзя прикрепить.'
-  if (file.size > MAX_FILE_BYTES) return 'Файл больше 30 МБ.'
-  return ''
 }
 const imagePath = (name) => `${import.meta.env.BASE_URL}images/${name}`
 const PRESENTATION_PDF = `${import.meta.env.BASE_URL}presentation/vek-presentation.pdf`
@@ -804,6 +801,7 @@ function RequestForm() {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
   const [files, setFiles] = useState([])
+  const [fileError, setFileError] = useState('')
   const fileInputRef = useRef(null)
 
   function handleFileChange(event) {
@@ -814,30 +812,33 @@ function RequestForm() {
 
     setFiles((prev) => {
       const next = [...prev]
-      let exceeded = false
+      let nextFileError = ''
 
       for (const file of newFiles) {
         if (next.some((item) => isSameFile(item, file))) continue
 
-        const nextTotal = next.reduce((sum, item) => sum + item.size, 0) + file.size
-        if (next.length >= MAX_FILES || nextTotal > MAX_TOTAL_BYTES) {
-          exceeded = true
+        if (!isAllowedUploadName(file.name)) {
+          nextFileError = 'Этот формат нельзя прикрепить.'
           continue
         }
-        if (file.size > MAX_FILE_BYTES) {
-          exceeded = true
+
+        const nextTotal = next.reduce((sum, item) => sum + item.size, 0) + file.size
+        if (next.length >= MAX_FILES || file.size > MAX_FILE_BYTES || nextTotal > MAX_TOTAL_BYTES) {
+          nextFileError = FILE_LIMITS_TEXT
+          continue
         }
 
         next.push(file)
       }
 
-      setError(exceeded ? FILE_LIMITS_TEXT : '')
+      setFileError(nextFileError)
       return next
     })
   }
 
   function removeFile(index) {
     setFiles((prev) => prev.filter((_, i) => i !== index))
+    setFileError('')
     setError('')
     setSuccess(false)
   }
@@ -906,6 +907,7 @@ function RequestForm() {
 
       form.reset()
       setFiles([])
+      setFileError('')
       if (fileInputRef.current) fileInputRef.current.value = ''
       setSuccess(true)
     } catch {
@@ -1020,31 +1022,31 @@ function RequestForm() {
                 className={fieldClass}
                 onChange={handleFileChange}
               />
-              <p className="mt-1.5 text-xs leading-relaxed text-steel-400">
-                Можно выбрать один файл, затем нажать ещё раз и добавить следующий.
-              </p>
               <label
                 htmlFor="request-files"
                 className="mt-2 inline-block cursor-pointer text-sm font-medium text-accent transition-colors hover:text-accent-hover"
               >
-                Добавить ещё файл
+                Можно добавить ещё файл
               </label>
-              {files.length > 0 ? (
-                <ul className="mt-2 space-y-1.5">
-                  {files.map((file, index) => {
-                    const issue = fileIssue(file)
-                    return (
+              {files.length === 0 ? (
+                <p className="mt-2 text-xs leading-relaxed text-steel-400">
+                  Файлы пока не выбраны.
+                </p>
+              ) : (
+                <div className="mt-3">
+                  <p className="text-sm font-medium text-graphite-800">Выбранные файлы:</p>
+                  <ol className="mt-2 space-y-1.5">
+                    {files.map((file, index) => (
                       <li
                         key={`${file.name}-${file.size}-${file.lastModified}-${index}`}
                         className="flex items-start justify-between gap-3 text-xs leading-relaxed text-steel-500"
                       >
                         <span>
-                          <span className="font-medium text-graphite-800">{file.name}</span>
-                          {' · '}
+                          <span className="text-graphite-800">
+                            {index + 1}. {file.name}
+                          </span>
+                          {' — '}
                           {formatFileSize(file.size)}
-                          {issue ? (
-                            <span className="mt-0.5 block text-graphite-800">{issue}</span>
-                          ) : null}
                         </span>
                         <button
                           type="button"
@@ -1054,9 +1056,12 @@ function RequestForm() {
                           Удалить
                         </button>
                       </li>
-                    )
-                  })}
-                </ul>
+                    ))}
+                  </ol>
+                </div>
+              )}
+              {fileError ? (
+                <p className="mt-2 text-sm leading-relaxed text-graphite-800">{fileError}</p>
               ) : null}
               <p className="mt-1.5 text-xs leading-relaxed text-steel-400">
                 Можно добавить файлы по одному или выбрать несколько сразу. До 10 файлов: PDF, DWG,
