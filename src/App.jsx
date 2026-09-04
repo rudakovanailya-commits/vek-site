@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { upload } from '@vercel/blob/client'
 
 const MAILTO = 'ooovek17@gmail.com'
@@ -56,8 +56,20 @@ function isAllowedUploadName(name) {
   return !parts.some((part) => BLOCKED_FILE_EXT.includes(`.${part}`))
 }
 
-function formatFileSizeMb(bytes) {
-  return `${(Number(bytes) / (1024 * 1024)).toFixed(1)} МБ`
+function formatFileSize(bytes) {
+  const n = Number(bytes) || 0
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} КБ`
+  return `${(n / (1024 * 1024)).toFixed(1)} МБ`
+}
+
+function isSameFile(a, b) {
+  return a.name === b.name && a.size === b.size
+}
+
+function fileIssue(file) {
+  if (!isAllowedUploadName(file.name)) return 'Этот формат нельзя прикрепить.'
+  if (file.size > MAX_FILE_BYTES) return 'Файл больше 30 МБ.'
+  return ''
 }
 const imagePath = (name) => `${import.meta.env.BASE_URL}images/${name}`
 const PRESENTATION_PDF = `${import.meta.env.BASE_URL}presentation/vek-presentation.pdf`
@@ -791,33 +803,43 @@ function RequestForm() {
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
-  const [selectedFiles, setSelectedFiles] = useState([])
+  const [files, setFiles] = useState([])
+  const fileInputRef = useRef(null)
 
-  function inspectFiles(fileList) {
-    const files = Array.from(fileList || []).filter((item) => item instanceof File && item.size >= 0)
-    return files.map((file) => {
-      const allowed = isAllowedUploadName(file.name)
-      const tooBig = file.size > MAX_FILE_BYTES
-      let issue = ''
-      if (!allowed) issue = 'Этот формат нельзя прикрепить.'
-      else if (tooBig) issue = 'Файл больше 30 МБ.'
-      return { file, issue }
+  function handleFileChange(event) {
+    const input = event.target
+    const newFiles = Array.from(event.target.files || []).filter((item) => item instanceof File)
+    input.value = ''
+    setSuccess(false)
+
+    setFiles((prev) => {
+      const next = [...prev]
+      let exceeded = false
+
+      for (const file of newFiles) {
+        if (next.some((item) => isSameFile(item, file))) continue
+
+        const nextTotal = next.reduce((sum, item) => sum + item.size, 0) + file.size
+        if (next.length >= MAX_FILES || nextTotal > MAX_TOTAL_BYTES) {
+          exceeded = true
+          continue
+        }
+        if (file.size > MAX_FILE_BYTES) {
+          exceeded = true
+        }
+
+        next.push(file)
+      }
+
+      setError(exceeded ? FILE_LIMITS_TEXT : '')
+      return next
     })
   }
 
-  function handleFilesChange(event) {
-    setSuccess(false)
+  function removeFile(index) {
+    setFiles((prev) => prev.filter((_, i) => i !== index))
     setError('')
-    const items = inspectFiles(event.target.files)
-    const total = items.reduce((sum, item) => sum + item.file.size, 0)
-    if (
-      items.length > MAX_FILES ||
-      total > MAX_TOTAL_BYTES ||
-      items.some((item) => item.file.size > MAX_FILE_BYTES)
-    ) {
-      setError(FILE_LIMITS_TEXT)
-    }
-    setSelectedFiles(items)
+    setSuccess(false)
   }
 
   async function handleSubmit(event) {
@@ -827,16 +849,21 @@ function RequestForm() {
 
     const form = event.currentTarget
     const formData = new FormData(form)
-    const items = inspectFiles(formData.getAll('files').concat(formData.getAll('file')))
-    const files = items.map((item) => item.file).filter((file) => file.size > 0)
-    const total = files.reduce((sum, file) => sum + file.size, 0)
+    formData.delete('files')
+    formData.delete('file')
+    files.forEach((file) => {
+      formData.append('files', file)
+    })
 
-    if (files.length > MAX_FILES || total > MAX_TOTAL_BYTES || files.some((file) => file.size > MAX_FILE_BYTES)) {
+    const attached = formData.getAll('files').filter((item) => item instanceof File && item.size > 0)
+    const total = attached.reduce((sum, file) => sum + file.size, 0)
+
+    if (attached.length > MAX_FILES || total > MAX_TOTAL_BYTES || attached.some((file) => file.size > MAX_FILE_BYTES)) {
       setError(FILE_LIMITS_TEXT)
       return
     }
 
-    if (items.some((item) => item.file.size > 0 && item.issue)) {
+    if (attached.some((file) => !isAllowedUploadName(file.name))) {
       setError(FORM_ERROR_TEXT)
       return
     }
@@ -847,7 +874,7 @@ function RequestForm() {
       formData.delete('files')
       formData.delete('file')
 
-      for (const file of files) {
+      for (const file of attached) {
         const blob = await upload(`requests/${file.name}`, file, {
           access: 'private',
           handleUploadUrl: '/api/send-request',
@@ -878,7 +905,8 @@ function RequestForm() {
       }
 
       form.reset()
-      setSelectedFiles([])
+      setFiles([])
+      if (fileInputRef.current) fileInputRef.current.value = ''
       setSuccess(true)
     } catch {
       setError(FORM_ERROR_TEXT)
@@ -977,42 +1005,66 @@ function RequestForm() {
                 className={`${fieldClass} resize-y`}
               />
             </label>
-            <label className="mt-3.5 block text-sm">
+            <div className="mt-3.5 block text-sm">
               <span className="mb-1.5 block font-medium text-graphite-800">Файлы</span>
               <p className="mb-1.5 text-sm leading-relaxed text-steel-500">
                 Прикрепите чертёж, КД, ТЗ, 3D-модель или архив для расчёта.
               </p>
               <input
+                id="request-files"
+                ref={fileInputRef}
                 name="files"
                 type="file"
                 multiple
                 accept=".pdf,.dwg,.dxf,.step,.stp,.iges,.igs,.jpg,.jpeg,.png,.zip,.rar,.7z"
                 className={fieldClass}
-                onChange={handleFilesChange}
+                onChange={handleFileChange}
               />
-              {selectedFiles.length > 0 ? (
+              <p className="mt-1.5 text-xs leading-relaxed text-steel-400">
+                Можно выбрать один файл, затем нажать ещё раз и добавить следующий.
+              </p>
+              <label
+                htmlFor="request-files"
+                className="mt-2 inline-block cursor-pointer text-sm font-medium text-accent transition-colors hover:text-accent-hover"
+              >
+                Добавить ещё файл
+              </label>
+              {files.length > 0 ? (
                 <ul className="mt-2 space-y-1.5">
-                  {selectedFiles.map((item) => (
-                    <li
-                      key={`${item.file.name}-${item.file.size}-${item.file.lastModified}`}
-                      className="text-xs leading-relaxed text-steel-500"
-                    >
-                      <span className="font-medium text-graphite-800">{item.file.name}</span>
-                      {' · '}
-                      {formatFileSizeMb(item.file.size)}
-                      {item.issue ? (
-                        <span className="mt-0.5 block text-graphite-800">{item.issue}</span>
-                      ) : null}
-                    </li>
-                  ))}
+                  {files.map((file, index) => {
+                    const issue = fileIssue(file)
+                    return (
+                      <li
+                        key={`${file.name}-${file.size}-${file.lastModified}-${index}`}
+                        className="flex items-start justify-between gap-3 text-xs leading-relaxed text-steel-500"
+                      >
+                        <span>
+                          <span className="font-medium text-graphite-800">{file.name}</span>
+                          {' · '}
+                          {formatFileSize(file.size)}
+                          {issue ? (
+                            <span className="mt-0.5 block text-graphite-800">{issue}</span>
+                          ) : null}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(index)}
+                          className="shrink-0 text-xs font-medium text-graphite-800 underline-offset-2 hover:underline"
+                        >
+                          Удалить
+                        </button>
+                      </li>
+                    )
+                  })}
                 </ul>
               ) : null}
               <p className="mt-1.5 text-xs leading-relaxed text-steel-400">
-                Можно прикрепить до 10 файлов: PDF, DWG, DXF, STEP, STP, IGES, JPG, PNG,
-                ZIP, RAR, 7Z. Один файл — до 30 МБ, общий размер — до 100 МБ. Если файлы
-                не прикрепляются, отправьте документацию напрямую на e-mail: {MAILTO}
+                Можно добавить файлы по одному или выбрать несколько сразу. До 10 файлов: PDF, DWG,
+                DXF, STEP, STP, IGES, JPG, PNG, ZIP, RAR, 7Z. Один файл — до 30 МБ, общий размер — до
+                100 МБ. Если файлы не прикрепляются, отправьте документацию напрямую на e-mail:{' '}
+                {MAILTO}
               </p>
-            </label>
+            </div>
             <div className="mt-5 flex flex-col gap-2">
               <button
                 type="submit"
