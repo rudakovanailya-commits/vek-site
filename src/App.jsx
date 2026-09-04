@@ -3,6 +3,7 @@ import { useState } from 'react'
 const MAILTO = 'ooovek17@gmail.com'
 const MAIL_SUBJECT = 'Заявка на расчёт изготовления детали'
 const imagePath = (name) => `${import.meta.env.BASE_URL}images/${name}`
+const PRESENTATION_PDF = `${import.meta.env.BASE_URL}presentation/vek-presentation.pdf`
 
 const navItems = [
   { href: '#services', label: 'Услуги' },
@@ -706,6 +707,16 @@ function About() {
               самостоятельно закупаемого материала после согласования условий
               заказа.
             </p>
+          </div>
+          <div className="mt-6">
+            <a
+              href={PRESENTATION_PDF}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary inline-flex items-center justify-center rounded-sm border border-white/25 bg-white/10 px-5 py-2.5 text-sm font-medium text-white"
+            >
+              Открыть презентацию
+            </a>
           </div>
         </div>
         <SitePhoto
