@@ -89,6 +89,14 @@ function formatSize(bytes) {
   return `${(n / (1024 * 1024)).toFixed(1)} МБ`
 }
 
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
 async function readRawBody(req) {
   const chunks = []
   for await (const chunk of req) {
@@ -123,14 +131,38 @@ async function parseJson(req) {
   return JSON.parse(buffer.toString('utf8') || '{}')
 }
 
-function appUrl() {
-  return process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : 'https://vek-site.vercel.app'
+function normalizeBlobPathname(value) {
+  let raw = String(value || '').trim()
+  if (!raw) return ''
+
+  if (/vercel-storage\.com/i.test(raw) || raw.includes('://')) {
+    try {
+      const parsed = new URL(raw)
+      raw = decodeURIComponent(parsed.pathname || '')
+    } catch {
+      const marker = '/requests/'
+      const index = raw.indexOf(marker)
+      raw = index >= 0 ? raw.slice(index) : ''
+    }
+  }
+
+  raw = raw.replace(/^\/+/, '')
+  if (!raw.startsWith('requests/') || raw.includes('..') || raw.includes('://')) return ''
+  return raw
 }
 
 function downloadLink(pathname) {
-  return `${appUrl()}/api/download-file?pathname=${encodeURIComponent(pathname)}`
+  const path = normalizeBlobPathname(pathname)
+  if (!path) return ''
+  return `https://vek-site.vercel.app/api/download-file?pathname=${encodeURIComponent(path)}`
+}
+
+function assertNoBlobUrl(value) {
+  const text = String(value || '')
+  if (/vercel-storage\.com/i.test(text)) {
+    throw new Error('unsafe_blob_url_in_mail')
+  }
+  return text
 }
 
 async function sendMail({ name, company, phone, email, message, uploadedFiles }) {
@@ -163,23 +195,47 @@ async function sendMail({ name, company, phone, email, message, uploadedFiles })
           )
           .join('\n\n')
 
-  const text = [
-    'Заявка на расчёт изготовления детали — сайт ООО ВЕК',
-    '',
-    `Имя: ${name || '—'}`,
-    `Компания: ${company || '—'}`,
-    `Телефон: ${phone || '—'}`,
-    `E-mail: ${email || '—'}`,
-    '',
-    'Описание задачи:',
-    message || '—',
-    '',
-    fileBlock,
-    '',
-    `Дата и время отправки: ${sentAt} (МСК)`,
-  ]
-    .filter((line, index, arr) => !(line === '' && arr[index - 1] === ''))
-    .join('\n')
+  const text = assertNoBlobUrl(
+    [
+      'Заявка на расчёт изготовления детали — сайт ООО ВЕК',
+      '',
+      `Имя: ${name || '—'}`,
+      `Компания: ${company || '—'}`,
+      `Телефон: ${phone || '—'}`,
+      `E-mail: ${email || '—'}`,
+      '',
+      'Описание задачи:',
+      message || '—',
+      '',
+      fileBlock,
+      '',
+      `Дата и время отправки: ${sentAt} (МСК)`,
+    ]
+      .filter((line, index, arr) => !(line === '' && arr[index - 1] === ''))
+      .join('\n'),
+  )
+
+  const htmlFiles =
+    uploadedFiles.length === 0
+      ? '<p>Файлы не приложены</p>'
+      : `<ol>${uploadedFiles
+          .map(
+            (file) =>
+              `<li><p>Название: ${escapeHtml(file.name)}<br>Размер: ${escapeHtml(file.sizeLabel)}<br>Ссылка на скачивание файла: <a href="${escapeHtml(file.downloadLink)}">${escapeHtml(file.downloadLink)}</a>${
+                file.pathname ? `<br>Путь файла: ${escapeHtml(file.pathname)}` : ''
+              }</p></li>`,
+          )
+          .join('')}</ol>`
+
+  const html = assertNoBlobUrl(
+    [
+      '<p>Заявка на расчёт изготовления детали — сайт ООО ВЕК</p>',
+      `<p>Имя: ${escapeHtml(name || '—')}<br>Компания: ${escapeHtml(company || '—')}<br>Телефон: ${escapeHtml(phone || '—')}<br>E-mail: ${escapeHtml(email || '—')}</p>`,
+      `<p>Описание задачи:</p><p>${escapeHtml(message || '—').replace(/\n/g, '<br>')}</p>`,
+      htmlFiles,
+      `<p>Дата и время отправки: ${escapeHtml(sentAt)} (МСК)</p>`,
+    ].join(''),
+  )
 
   const resend = new Resend(apiKey)
   const { error } = await resend.emails.send({
@@ -187,6 +243,7 @@ async function sendMail({ name, company, phone, email, message, uploadedFiles })
     to,
     subject: 'Заявка на расчёт изготовления детали — сайт ООО ВЕК',
     text,
+    html,
   })
   if (error) {
     console.error('send-request: Resend error', {
@@ -267,11 +324,18 @@ export default async function handler(req, res) {
           token: process.env.BLOB_READ_WRITE_TOKEN,
         })
 
+        const pathname = normalizeBlobPathname(blob.pathname)
+        const link = downloadLink(pathname)
+        if (!pathname || !link) {
+          json(res, 500, { ok: false, error: 'send_failed' })
+          return
+        }
+
         uploadedFiles.push({
           name: originalName,
           sizeLabel: formatSize(uploaded.size),
-          downloadLink: downloadLink(blob.pathname),
-          pathname: blob.pathname,
+          downloadLink: link,
+          pathname,
         })
       }
     } else if (metaPathnames.length > 0) {
@@ -282,11 +346,12 @@ export default async function handler(req, res) {
       }
 
       for (let i = 0; i < metaPathnames.length; i += 1) {
-        const pathname = metaPathnames[i]
+        const pathname = normalizeBlobPathname(metaPathnames[i])
         const fileName = metaNames[i] || 'файл'
         const fileSize = metaSizes[i] || 0
+        const link = downloadLink(pathname)
 
-        if (!pathname.startsWith('requests/') || pathname.includes('..') || (fileName && !isAllowedFilename(fileName))) {
+        if (!pathname || !link || (fileName && !isAllowedFilename(fileName))) {
           json(res, 400, { ok: false, error: 'unsupported_file_type' })
           return
         }
@@ -298,7 +363,7 @@ export default async function handler(req, res) {
         uploadedFiles.push({
           name: fileName,
           sizeLabel: formatSize(fileSize),
-          downloadLink: downloadLink(pathname),
+          downloadLink: link,
           pathname,
         })
       }
