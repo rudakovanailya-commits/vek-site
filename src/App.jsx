@@ -1,8 +1,6 @@
 import { useRef, useState } from 'react'
 import { upload } from '@vercel/blob/client'
 
-const MAILTO = 'ooovek17@gmail.com'
-const MAIL_SUBJECT = 'Заявка на расчёт изготовления детали'
 const MAX_FILES = 10
 const MAX_FILE_BYTES = 30 * 1024 * 1024
 const MAX_TOTAL_BYTES = 100 * 1024 * 1024
@@ -732,12 +730,6 @@ function Process() {
             >
               Отправить чертёж на расчёт
             </a>
-            <a
-              href={`mailto:${MAILTO}?subject=${encodeURIComponent(MAIL_SUBJECT)}`}
-              className="inline-flex items-center justify-center rounded-sm border border-accent/45 bg-white px-4 py-2.5 text-sm font-medium text-accent transition-colors hover:border-accent hover:bg-accent/5"
-            >
-              Написать на e-mail
-            </a>
           </div>
         </div>
       </Container>
@@ -911,6 +903,7 @@ function RequestForm() {
   const [error, setError] = useState('')
   const [files, setFiles] = useState([])
   const [fileError, setFileError] = useState('')
+  const [formKey, setFormKey] = useState(0)
   const fileInputRef = useRef(null)
 
   function handleFileChange(event) {
@@ -1026,6 +1019,15 @@ function RequestForm() {
     }
   }
 
+  function startAnotherRequest() {
+    setSuccess(false)
+    setError('')
+    setFileError('')
+    setFiles([])
+    setFormKey((key) => key + 1)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const fieldClass =
     'w-full rounded-sm border border-steel-200 bg-steel-50 px-3 py-2.5 text-sm text-graphite-900 outline-none transition-colors placeholder:text-steel-400 focus:border-accent focus:bg-white'
 
@@ -1092,7 +1094,45 @@ function RequestForm() {
               нужно уточнить.
             </p>
           </aside>
+          {success ? (
+            <div
+              className="request-success-card flex h-full flex-col border border-accent/35 bg-white p-5 shadow-card sm:p-6"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="flex items-start gap-4">
+                <span className="request-success-icon flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-white">
+                  <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      className="request-success-check"
+                      d="M5 13l4 4L19 7"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xl font-semibold tracking-tight text-graphite-900 sm:text-2xl">
+                    Заявка отправлена
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed text-steel-500 sm:text-base">
+                    Мы получили вашу документацию и свяжемся с вами после рассмотрения.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={startAnotherRequest}
+                className="mt-auto inline-flex w-full items-center justify-center rounded-sm border border-accent/45 bg-white px-5 py-2.5 text-sm font-medium text-accent transition-colors hover:border-accent hover:bg-accent/5 sm:mt-8 sm:w-auto"
+              >
+                Отправить ещё одну заявку
+              </button>
+            </div>
+          ) : (
           <form
+            key={formKey}
             className="border border-steel-200 bg-white p-5 shadow-card sm:p-6"
             onSubmit={handleSubmit}
           >
@@ -1147,7 +1187,7 @@ function RequestForm() {
                 className={`${fieldClass} resize-y`}
               />
             </label>
-            <div className="mt-3.5 block text-sm">
+            <div className="relative mt-3.5 block text-sm">
               <span className="mb-1.5 block font-medium text-graphite-800">Файлы</span>
               <p className="mb-1.5 text-sm leading-relaxed text-steel-500">
                 Прикрепите чертёж, КД, ТЗ, 3D-модель или архив для расчёта.
@@ -1159,15 +1199,25 @@ function RequestForm() {
                 type="file"
                 multiple
                 accept=".pdf,.dwg,.dxf,.step,.stp,.iges,.igs,.jpg,.jpeg,.png,.zip,.rar,.7z"
-                className={fieldClass}
+                className="request-file-input"
                 onChange={handleFileChange}
               />
-              <label
-                htmlFor="request-files"
-                className="mt-2 inline-block cursor-pointer text-sm font-medium text-accent transition-colors hover:text-accent-hover"
-              >
-                Можно добавить ещё файл
-              </label>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <label
+                  htmlFor="request-files"
+                  className="inline-flex cursor-pointer items-center justify-center rounded-sm border border-accent/45 bg-white px-5 py-2.5 text-sm font-medium text-accent transition-colors hover:border-accent hover:bg-accent/5"
+                >
+                  Выбрать файлы
+                </label>
+                {files.length > 0 ? (
+                  <label
+                    htmlFor="request-files"
+                    className="cursor-pointer text-sm font-medium text-accent transition-colors hover:text-accent-hover"
+                  >
+                    Добавить ещё файлы
+                  </label>
+                ) : null}
+              </div>
               {files.length === 0 ? (
                 <p className="mt-2 text-xs leading-relaxed text-steel-400">
                   Файлы пока не выбраны.
@@ -1219,41 +1269,12 @@ function RequestForm() {
               >
                 {sending ? 'Отправляем заявку...' : 'Отправить заявку'}
               </button>
-              {success ? (
-                <div
-                  className="request-success-card mt-2 border border-accent/35 bg-accent-muted px-4 py-5 sm:px-6 sm:py-6"
-                  role="status"
-                  aria-live="polite"
-                >
-                  <div className="flex items-start gap-4">
-                    <span className="request-success-icon flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-white">
-                      <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path
-                          className="request-success-check"
-                          d="M5 13l4 4L19 7"
-                          stroke="currentColor"
-                          strokeWidth="2.2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-xl font-semibold tracking-tight text-graphite-900 sm:text-2xl">
-                        Заявка отправлена
-                      </p>
-                      <p className="mt-2 text-sm leading-relaxed text-steel-500 sm:text-base">
-                        Мы получили вашу документацию и свяжемся с вами после рассмотрения.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
               {error ? (
                 <p className="text-sm leading-relaxed text-graphite-800">{error}</p>
               ) : null}
             </div>
           </form>
+          )}
         </div>
       </Container>
     </section>
