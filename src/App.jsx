@@ -1,7 +1,28 @@
 import { useState } from 'react'
+import { upload } from '@vercel/blob/client'
 
 const MAILTO = 'ooovek17@gmail.com'
 const MAIL_SUBJECT = 'Заявка на расчёт изготовления детали'
+const MAX_FILE_BYTES = 30 * 1024 * 1024
+const FILE_TOO_LARGE_TEXT =
+  'Файл слишком большой. Пожалуйста, отправьте документацию напрямую на ooovek17@gmail.com'
+const FORM_ERROR_TEXT =
+  'Не удалось отправить заявку через сайт. Пожалуйста, направьте документацию на ooovek17@gmail.com'
+const ALLOWED_FILE_EXT = [
+  '.pdf',
+  '.dwg',
+  '.dxf',
+  '.step',
+  '.stp',
+  '.iges',
+  '.igs',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.zip',
+  '.rar',
+  '.7z',
+]
 const imagePath = (name) => `${import.meta.env.BASE_URL}images/${name}`
 const PRESENTATION_PDF = `${import.meta.env.BASE_URL}presentation/vek-presentation.pdf`
 
@@ -388,7 +409,7 @@ function Hero() {
               Отправить чертёж на расчёт
             </a>
             <a
-              href="#contacts"
+              href="#request"
               className="btn-secondary inline-flex items-center justify-center rounded-sm border border-white/25 bg-white/10 px-5 py-2.5 text-sm font-medium text-white"
             >
               Обсудить заказ
@@ -731,19 +752,73 @@ function About() {
 }
 
 function RequestForm() {
-  function handleSubmit(event) {
+  const [sending, setSending] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSubmit(event) {
     event.preventDefault()
-    const data = new FormData(event.currentTarget)
-    const lines = [
-      `Имя: ${data.get('name') || ''}`,
-      `Компания: ${data.get('company') || ''}`,
-      `Телефон: ${data.get('phone') || ''}`,
-      `E-mail: ${data.get('email') || ''}`,
-      '',
-      data.get('comment') || '',
-    ]
-    const href = `mailto:${MAILTO}?subject=${encodeURIComponent(MAIL_SUBJECT)}&body=${encodeURIComponent(lines.join('\n'))}`
-    window.location.href = href
+    setSuccess(false)
+    setError('')
+
+    const form = event.currentTarget
+    const formData = new FormData(form)
+    const file = formData.get('file')
+
+    if (file instanceof File && file.size > MAX_FILE_BYTES) {
+      setError(FILE_TOO_LARGE_TEXT)
+      return
+    }
+
+    if (file instanceof File && file.size > 0) {
+      const name = file.name.toLowerCase()
+      const ext = name.includes('.') ? `.${name.split('.').pop()}` : ''
+      if (!ALLOWED_FILE_EXT.includes(ext)) {
+        setError(FORM_ERROR_TEXT)
+        return
+      }
+    }
+
+    setSending(true)
+
+    try {
+      if (file instanceof File && file.size > 0) {
+        const blob = await upload(`requests/${file.name}`, file, {
+          access: 'private',
+          handleUploadUrl: '/api/send-request',
+          multipart: true,
+        })
+        formData.set('blobUrl', blob.url)
+        formData.set('blobDownloadUrl', blob.downloadUrl || blob.url)
+        formData.set('blobPathname', blob.pathname || '')
+        formData.set('fileName', file.name)
+        formData.set('fileSize', String(file.size))
+        formData.delete('file')
+      }
+
+      const response = await fetch('/api/send-request', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (response.status === 413) {
+        setError(FILE_TOO_LARGE_TEXT)
+        return
+      }
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok || !payload.ok) {
+        setError(FORM_ERROR_TEXT)
+        return
+      }
+
+      form.reset()
+      setSuccess(true)
+    } catch {
+      setError(FORM_ERROR_TEXT)
+    } finally {
+      setSending(false)
+    }
   }
 
   const fieldClass =
@@ -760,7 +835,7 @@ function RequestForm() {
           <aside className="flex flex-col border border-steel-200 bg-white p-5 shadow-card sm:p-6">
             <span className="block h-px w-8 bg-accent/70" />
             <p className="mt-4 text-sm leading-relaxed text-steel-500">
-              Для передачи технической документации отправьте файлы на e-mail
+              Прикрепите документацию в форме или отправьте файлы на e-mail
               компании. В заявке укажите контактные данные и краткое описание
               задачи.
             </p>
@@ -769,8 +844,8 @@ function RequestForm() {
                 Отправка файлов
               </p>
               <p className="mt-2 text-sm leading-relaxed text-graphite-800">
-                Техническая документация отправляется на e-mail компании.
-                Загрузка файлов на сайте не подключена.
+                Чертёж, КД, ТЗ или архив можно прикрепить к заявке. Если файл не
+                прикрепляется, направьте документацию на e-mail.
               </p>
               <p className="mt-2 text-sm font-medium text-accent">{MAILTO}</p>
             </div>
@@ -778,7 +853,7 @@ function RequestForm() {
               href={`mailto:${MAILTO}?subject=${encodeURIComponent(MAIL_SUBJECT)}`}
               className="mt-auto pt-5 inline-flex items-center justify-center rounded-sm border border-graphite-800 px-5 py-2.5 text-sm font-medium text-graphite-900 transition-colors hover:bg-graphite-900 hover:text-white"
             >
-              Написать на e-mail
+              Или отправьте документацию напрямую на e-mail
             </a>
           </aside>
           <form
@@ -830,36 +905,51 @@ function RequestForm() {
             <label className="mt-3.5 block text-sm">
               <span className="mb-1.5 block font-medium text-graphite-800">Комментарий</span>
               <textarea
-                name="comment"
+                name="message"
                 rows="3"
                 placeholder="Кратко опишите задачу: деталь, количество, материал или особенности изготовления"
                 className={`${fieldClass} resize-y`}
               />
             </label>
-            <div className="mt-3.5 border-l-2 border-accent bg-steel-50 px-4 py-3">
-              <p className="text-sm font-medium text-graphite-800">Файл</p>
-              <p className="mt-1.5 text-sm leading-relaxed text-steel-500">
-                Файлы не загружаются через сайт. Для передачи чертежей, КД, ТЗ или
-                иной исходной документации отправьте их на e-mail компании.
+            <label className="mt-3.5 block text-sm">
+              <span className="mb-1.5 block font-medium text-graphite-800">Файл</span>
+              <p className="mb-1.5 text-sm leading-relaxed text-steel-500">
+                Прикрепите чертёж, КД, ТЗ или архив для расчёта.
               </p>
-              <a
-                href={`mailto:${MAILTO}?subject=${encodeURIComponent(MAIL_SUBJECT)}`}
-                className="mt-2 inline-flex text-sm font-medium text-accent transition-colors hover:text-accent-hover"
-              >
-                Отправить документацию на e-mail
-              </a>
-            </div>
+              <input
+                name="file"
+                type="file"
+                accept=".pdf,.dwg,.dxf,.step,.stp,.iges,.igs,.jpg,.jpeg,.png,.zip,.rar,.7z"
+                className={fieldClass}
+              />
+              <p className="mt-1.5 text-xs leading-relaxed text-steel-400">
+                PDF, DWG, DXF, STEP, STP, IGES, JPG, PNG, ZIP, RAR, 7Z. Если файл не
+                прикрепляется, отправьте документацию напрямую на e-mail:{' '}
+                {MAILTO}
+              </p>
+            </label>
             <div className="mt-5 flex flex-col gap-2">
               <button
                 type="submit"
-                className="btn-primary inline-flex w-full items-center justify-center rounded-sm bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover sm:w-auto"
+                disabled={sending}
+                className="btn-primary inline-flex w-full items-center justify-center rounded-sm bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover disabled:cursor-wait disabled:opacity-80 sm:w-auto"
               >
-                Отправить заявку
+                {sending ? 'Отправляем заявку...' : 'Отправить заявку'}
               </button>
-              <p className="text-xs leading-relaxed text-steel-400">
-                После нажатия откроется почтовый клиент. Данные формы не сохраняются
-                на сайте.
-              </p>
+              {success ? (
+                <p className="text-sm leading-relaxed text-graphite-800">
+                  Заявка отправлена. Мы свяжемся с вами после рассмотрения документации.
+                </p>
+              ) : null}
+              {error ? (
+                <p className="text-sm leading-relaxed text-graphite-800">{error}</p>
+              ) : null}
+              <a
+                href={`mailto:${MAILTO}?subject=${encodeURIComponent(MAIL_SUBJECT)}`}
+                className="text-xs leading-relaxed text-accent transition-colors hover:text-accent-hover"
+              >
+                Или отправьте документацию напрямую на e-mail
+              </a>
             </div>
           </form>
         </div>
