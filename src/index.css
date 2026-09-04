@@ -252,19 +252,155 @@
   }
 }
 
+@keyframes request-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes request-icon-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+
+  70% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes request-check-draw {
+  from {
+    stroke-dashoffset: 28;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes request-wait-pulse {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  50% {
+    transform: translateY(-3px);
+    opacity: 0.88;
+  }
+}
+
+@keyframes request-route-draw {
+  from {
+    stroke-dashoffset: 140;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes request-progress-draw {
+  from {
+    stroke-dashoffset: 260;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.request-success-card {
+  animation: request-fade-up 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.request-success-icon {
+  animation: request-icon-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.request-success-check {
+  stroke-dasharray: 28;
+  stroke-dashoffset: 28;
+  animation: request-check-draw 400ms 160ms ease-out forwards;
+}
+
+.request-wait-art {
+  animation: request-wait-pulse 2.6s ease-in-out infinite;
+}
+
+.request-aside-art {
+  animation: request-fade-up 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.request-aside-panel {
+  background:
+    linear-gradient(180deg, rgba(30, 90, 168, 0.08) 0%, rgba(255, 255, 255, 0) 38%),
+    #ffffff;
+  box-shadow:
+    0 6px 18px rgba(21, 26, 33, 0.045),
+    inset 0 3px 0 #1e5aa8;
+}
+
+.request-aside-scene {
+  background:
+    radial-gradient(ellipse at 18% 40%, rgba(30, 90, 168, 0.14), transparent 46%),
+    linear-gradient(180deg, #eef3f9 0%, #f7f8fa 100%);
+}
+
+.request-route-line {
+  stroke-dasharray: 140;
+  stroke-dashoffset: 140;
+  animation: request-route-draw 900ms ease-out forwards;
+}
+
+.request-progress-fill {
+  stroke-dasharray: 260;
+  stroke-dashoffset: 260;
+  animation: request-progress-draw 720ms 80ms ease-out forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
 
   .hero-fade-in,
-  .hero-glow {
+  .hero-glow,
+  .request-success-card,
+  .request-success-icon,
+  .request-success-check,
+  .request-wait-art,
+  .request-aside-art,
+  .request-route-line,
+  .request-progress-fill {
     animation: none !important;
   }
 
-  .hero-fade-in {
+  .hero-fade-in,
+  .request-success-card,
+  .request-aside-art {
     opacity: 1;
     transform: none;
+  }
+
+  .request-route-line,
+  .request-progress-fill,
+  .request-success-check {
+    stroke-dashoffset: 0;
   }
 
   .hero-glow {

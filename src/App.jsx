@@ -7,9 +7,9 @@ const MAX_FILES = 10
 const MAX_FILE_BYTES = 30 * 1024 * 1024
 const MAX_TOTAL_BYTES = 100 * 1024 * 1024
 const FILE_LIMITS_TEXT =
-  'Можно прикрепить до 10 файлов. Размер одного файла — до 30 МБ, общий размер — до 100 МБ. Если файлов больше или они тяжелее, отправьте документацию напрямую на e-mail: ooovek17@gmail.com'
+  'Можно прикрепить до 10 файлов. Размер одного файла — до 30 МБ, общий размер — до 100 МБ.'
 const FORM_ERROR_TEXT =
-  'Не удалось отправить заявку через сайт. Пожалуйста, направьте документацию на ooovek17@gmail.com'
+  'Не удалось отправить заявку через сайт. Пожалуйста, попробуйте ещё раз или свяжитесь с нами по контактам ниже.'
 const ALLOWED_FILE_EXT = [
   '.pdf',
   '.dwg',
@@ -796,6 +796,115 @@ function About() {
   )
 }
 
+const requestReadiness = [
+  {
+    step: '01',
+    title: 'Есть идея или образец',
+    text: 'Можно начать обсуждение и определить, какие данные потребуются для оценки.',
+  },
+  {
+    step: '02',
+    title: 'Есть КД, чертёж или модель',
+    text: 'Можно оценивать технологичность, маршрут обработки и основные требования к изготовлению.',
+  },
+  {
+    step: '03',
+    title: 'Есть КД и параметры заказа',
+    text: 'Указаны материал, объём партии, сроки, доставка, шероховатость, покрытие и контроль.',
+    outcome: 'Можно готовить более точное предложение.',
+    featured: true,
+  },
+]
+
+function RequestProcessScene() {
+  return (
+    <div className="request-aside-scene request-aside-art px-3 py-5 sm:px-5 sm:py-6">
+      <svg
+        className="h-auto w-full text-accent"
+        viewBox="0 0 336 118"
+        fill="none"
+        aria-hidden="true"
+      >
+        <rect x="10" y="28" width="46" height="58" rx="2" fill="#ffffff" stroke="currentColor" strokeWidth="1.7" />
+        <path d="M18 48c8-10 22-10 30 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        <circle cx="33" cy="62" r="5" stroke="currentColor" strokeWidth="1.6" />
+        <path
+          className="request-route-line"
+          d="M62 57h28"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+        />
+        <path d="M84 53l8 4-8 4" fill="currentColor" />
+        <rect x="96" y="24" width="50" height="66" rx="2" fill="#ffffff" stroke="currentColor" strokeWidth="1.7" />
+        <path d="M130 24v14h16" fill="#E8EDF3" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+        <path d="M130 24l16 14" stroke="currentColor" strokeWidth="1.7" />
+        <path d="M108 54h26M108 64h20M108 74h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        <path
+          className="request-route-line"
+          d="M152 57h28"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+        />
+        <path d="M174 53l8 4-8 4" fill="currentColor" />
+        <rect x="186" y="28" width="50" height="58" rx="2" fill="#ffffff" stroke="currentColor" strokeWidth="1.7" />
+        <path d="M198 44h26M198 54h26M198 64h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        <circle cx="224" cy="64" r="3.2" fill="currentColor" />
+        <path
+          className="request-route-line"
+          d="M242 57h26"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+        />
+        <path d="M262 53l8 4-8 4" fill="currentColor" />
+        <circle cx="300" cy="57" r="18" fill="#1E5AA8" />
+        <path d="M292 57l6 6 12-13" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <div className="mt-2 grid grid-cols-4 gap-1 text-center text-[9px] font-semibold uppercase tracking-[0.1em] text-accent sm:text-[10px]">
+        <span>Идея</span>
+        <span>КД</span>
+        <span>Параметры</span>
+        <span>Оценка</span>
+      </div>
+    </div>
+  )
+}
+
+function RequestAcceptedScene() {
+  return (
+    <div className="request-aside-scene request-aside-art px-3 py-5 sm:px-5 sm:py-7">
+      <svg
+        className="h-auto w-full text-accent"
+        viewBox="0 0 320 128"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path d="M28 64h264" stroke="#DDE3EA" strokeWidth="3" strokeLinecap="round" />
+        <path
+          className="request-progress-fill"
+          d="M28 64h264"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+        <circle cx="48" cy="64" r="10" fill="#1E5AA8" />
+        <circle cx="160" cy="64" r="10" fill="#1E5AA8" />
+        <circle cx="272" cy="64" r="22" fill="#1E5AA8" />
+        <path
+          className="request-success-check"
+          d="M262 64l7 7 14-15"
+          stroke="#ffffff"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
+  )
+}
+
 function RequestForm() {
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -927,30 +1036,61 @@ function RequestForm() {
           title="Отправьте чертёж на расчёт"
           subtitle="Пришлите чертёж, КД, техническое задание или иную исходную документацию — специалисты ООО «ВЕК» оценят возможность изготовления и подготовят предложение."
         />
-        <div className="mt-8 grid gap-5 lg:grid-cols-[0.82fr_1.18fr] lg:items-stretch">
-          <aside className="flex flex-col border border-steel-200 bg-white p-5 shadow-card sm:p-6">
-            <span className="block h-px w-8 bg-accent/70" />
-            <p className="mt-4 text-sm leading-relaxed text-steel-500">
-              Прикрепите документацию в форме или отправьте файлы на e-mail
-              компании. В заявке укажите контактные данные и краткое описание
-              задачи.
-            </p>
-            <div className="mt-5 border border-steel-200 bg-steel-50 px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-steel-400">
-                Отправка файлов
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-graphite-800">
-                Чертёж, КД, ТЗ или архив можно прикрепить к заявке. Если файл не
-                прикрепляется, направьте документацию на e-mail.
-              </p>
-              <p className="mt-2 text-sm font-medium text-accent">{MAILTO}</p>
+        <div className="mt-8 grid gap-5 lg:grid-cols-[0.96fr_1.04fr] lg:items-stretch">
+          <aside className="request-aside-panel flex h-full flex-col border border-accent/20 p-5 sm:p-6">
+            <div key={success ? 'sent' : 'wait'}>
+              {success ? <RequestAcceptedScene /> : <RequestProcessScene />}
             </div>
-            <a
-              href={`mailto:${MAILTO}?subject=${encodeURIComponent(MAIL_SUBJECT)}`}
-              className="mt-auto pt-5 inline-flex items-center justify-center rounded-sm border border-graphite-800 px-5 py-2.5 text-sm font-medium text-graphite-900 transition-colors hover:bg-graphite-900 hover:text-white"
-            >
-              Или отправьте документацию напрямую на e-mail
-            </a>
+            {success ? (
+              <div className="request-aside-art mt-5">
+                <span className="block h-px w-12 bg-accent" />
+                <h3 className="mt-4 text-xl font-semibold tracking-tight text-graphite-900 sm:text-2xl">
+                  Заявка принята к рассмотрению
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-steel-500 sm:text-base">
+                  Документация и описание задачи переданы специалистам ООО «ВЕК».
+                </p>
+              </div>
+            ) : (
+              <>
+                <span className="mt-5 block h-px w-12 bg-accent" />
+                <h3 className="mt-4 text-xl font-semibold tracking-tight text-graphite-900 sm:text-2xl">
+                  На каком этапе ваш заказ?
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-steel-500">
+                  Чем понятнее исходные данные, объём и требования, тем быстрее
+                  для обеих сторон можно оценить технологичность, сроки и стоимость
+                  изготовления.
+                </p>
+                <ol className="mt-4 space-y-2.5">
+                  {requestReadiness.map((item) => (
+                    <li
+                      key={item.step}
+                      className={
+                        item.featured
+                          ? 'flex gap-3 border border-accent/35 bg-accent-muted px-3 py-3'
+                          : 'flex gap-3 border border-accent/15 bg-white px-3 py-3'
+                      }
+                    >
+                      <span className="shrink-0 pt-0.5 text-[12px] font-semibold tracking-[0.14em] text-accent">
+                        {item.step}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-graphite-900">{item.title}</p>
+                        <p className="mt-1 text-sm leading-relaxed text-steel-500">{item.text}</p>
+                        {item.outcome ? (
+                          <p className="mt-1.5 text-xs leading-relaxed text-accent">{item.outcome}</p>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </>
+            )}
+            <p className="mt-auto border-t border-accent/15 pt-4 text-sm leading-relaxed text-graphite-800">
+              Даже если часть данных пока неизвестна — отправьте то, что есть. Мы подскажем, что
+              нужно уточнить.
+            </p>
           </aside>
           <form
             className="border border-steel-200 bg-white p-5 shadow-card sm:p-6"
@@ -1064,10 +1204,11 @@ function RequestForm() {
                 <p className="mt-2 text-sm leading-relaxed text-graphite-800">{fileError}</p>
               ) : null}
               <p className="mt-1.5 text-xs leading-relaxed text-steel-400">
-                Можно добавить файлы по одному или выбрать несколько сразу. До 10 файлов: PDF, DWG,
-                DXF, STEP, STP, IGES, JPG, PNG, ZIP, RAR, 7Z. Один файл — до 30 МБ, общий размер — до
-                100 МБ. Если файлы не прикрепляются, отправьте документацию напрямую на e-mail:{' '}
-                {MAILTO}
+                Можно добавить файлы по одному или выбрать несколько сразу.
+                <br />
+                До 10 файлов: PDF, DWG, DXF, STEP, STP, IGES, JPG, PNG, ZIP, RAR, 7Z.
+                <br />
+                Один файл — до 30 МБ, общий размер — до 100 МБ.
               </p>
             </div>
             <div className="mt-5 flex flex-col gap-2">
@@ -1079,19 +1220,38 @@ function RequestForm() {
                 {sending ? 'Отправляем заявку...' : 'Отправить заявку'}
               </button>
               {success ? (
-                <p className="text-sm leading-relaxed text-graphite-800">
-                  Заявка отправлена. Мы свяжемся с вами после рассмотрения документации.
-                </p>
+                <div
+                  className="request-success-card mt-2 border border-accent/35 bg-accent-muted px-4 py-5 sm:px-6 sm:py-6"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <div className="flex items-start gap-4">
+                    <span className="request-success-icon flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-white">
+                      <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path
+                          className="request-success-check"
+                          d="M5 13l4 4L19 7"
+                          stroke="currentColor"
+                          strokeWidth="2.2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xl font-semibold tracking-tight text-graphite-900 sm:text-2xl">
+                        Заявка отправлена
+                      </p>
+                      <p className="mt-2 text-sm leading-relaxed text-steel-500 sm:text-base">
+                        Мы получили вашу документацию и свяжемся с вами после рассмотрения.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               ) : null}
               {error ? (
                 <p className="text-sm leading-relaxed text-graphite-800">{error}</p>
               ) : null}
-              <a
-                href={`mailto:${MAILTO}?subject=${encodeURIComponent(MAIL_SUBJECT)}`}
-                className="text-xs leading-relaxed text-accent transition-colors hover:text-accent-hover"
-              >
-                Или отправьте документацию напрямую на e-mail
-              </a>
             </div>
           </form>
         </div>
@@ -1104,18 +1264,13 @@ function Contacts() {
   return (
     <section id="contacts" className={`scroll-mt-[5.5rem] bg-steel-50 ${sectionYTight}`}>
       <Container>
-        <div className="grid gap-6 lg:grid-cols-[0.78fr_1.22fr] lg:items-end">
-          <div className="min-w-0">
-            <h2 className="text-[1.45rem] font-semibold tracking-tight text-graphite-900 sm:text-2xl lg:text-[1.85rem]">
-              Контакты
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-steel-500 sm:text-base">
-              Свяжитесь с нами, чтобы обсудить изготовление деталей по вашей
-              документации.
-            </p>
-          </div>
-          <p className="text-sm leading-relaxed text-steel-400 lg:text-right">
-            Перед публикацией нужно уточнить возможность размещения карты.
+        <div>
+          <h2 className="text-[1.45rem] font-semibold tracking-tight text-graphite-900 sm:text-2xl lg:text-[1.85rem]">
+            Контакты
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-steel-500 sm:text-base">
+            Свяжитесь с нами, чтобы обсудить изготовление деталей по вашей
+            документации.
           </p>
         </div>
         <div className="mt-6 grid gap-px overflow-hidden border border-steel-200 bg-steel-200 sm:grid-cols-2 lg:grid-cols-3">
