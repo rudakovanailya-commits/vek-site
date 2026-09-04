@@ -110,7 +110,7 @@
       inset 0 0 0 1px rgba(30, 90, 168, 0.28);
   }
 
-  .request-file-input {
+  .request-file-input-wrap {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -118,9 +118,35 @@
     margin: -1px;
     overflow: hidden;
     clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .request-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
     white-space: nowrap;
     border: 0;
     opacity: 0;
+    pointer-events: none;
+  }
+
+  .request-file-input::file-selector-button {
+    display: none;
+  }
+
+  .card-lift {
+    transition:
+      transform 250ms ease,
+      border-color 250ms ease,
+      box-shadow 250ms ease;
   }
 
   .card-lift:hover {

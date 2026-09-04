@@ -1192,31 +1192,34 @@ function RequestForm() {
               <p className="mb-1.5 text-sm leading-relaxed text-steel-500">
                 Прикрепите чертёж, КД, ТЗ, 3D-модель или архив для расчёта.
               </p>
-              <input
-                id="request-files"
-                ref={fileInputRef}
-                name="files"
-                type="file"
-                multiple
-                accept=".pdf,.dwg,.dxf,.step,.stp,.iges,.igs,.jpg,.jpeg,.png,.zip,.rar,.7z"
-                className="request-file-input"
-                onChange={handleFileChange}
-              />
+              <span className="request-file-input-wrap">
+                <input
+                  id="request-files"
+                  ref={fileInputRef}
+                  name="files"
+                  type="file"
+                  multiple
+                  accept=".pdf,.dwg,.dxf,.step,.stp,.iges,.igs,.jpg,.jpeg,.png,.zip,.rar,.7z"
+                  className="request-file-input"
+                  tabIndex={-1}
+                  onChange={handleFileChange}
+                />
+              </span>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <label
-                  htmlFor="request-files"
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
                   className="inline-flex cursor-pointer items-center justify-center rounded-sm border border-accent/45 bg-white px-5 py-2.5 text-sm font-medium text-accent transition-colors hover:border-accent hover:bg-accent/5"
                 >
                   Выбрать файлы
-                </label>
-                {files.length > 0 ? (
-                  <label
-                    htmlFor="request-files"
-                    className="cursor-pointer text-sm font-medium text-accent transition-colors hover:text-accent-hover"
-                  >
-                    Добавить ещё файлы
-                  </label>
-                ) : null}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="cursor-pointer bg-transparent p-0 text-sm font-medium text-accent transition-colors hover:text-accent-hover"
+                >
+                  Добавить ещё файлы
+                </button>
               </div>
               {files.length === 0 ? (
                 <p className="mt-2 text-xs leading-relaxed text-steel-400">
