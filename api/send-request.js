@@ -10,6 +10,8 @@ export const config = {
 }
 
 const MAX_FILE_BYTES = 30 * 1024 * 1024
+const MAX_TOTAL_BYTES = 100 * 1024 * 1024
+const MAX_FILES = 10
 const ALLOWED_EXT = new Set([
   '.pdf',
   '.dwg',
@@ -87,18 +89,6 @@ function formatSize(bytes) {
   return `${(n / (1024 * 1024)).toFixed(1)} МБ`
 }
 
-function isVercelBlobUrl(url) {
-  try {
-    const parsed = new URL(url)
-    return (
-      parsed.protocol === 'https:' &&
-      parsed.hostname.endsWith('.blob.vercel-storage.com')
-    )
-  } catch {
-    return false
-  }
-}
-
 async function readRawBody(req) {
   const chunks = []
   for await (const chunk of req) {
@@ -109,7 +99,7 @@ async function readRawBody(req) {
 
 async function parseFormData(req) {
   const buffer = await readRawBody(req)
-  if (buffer.length > MAX_FILE_BYTES + 1024 * 1024) {
+  if (buffer.length > MAX_TOTAL_BYTES + 1024 * 1024) {
     const error = new Error('file_too_large')
     error.code = 'file_too_large'
     throw error
@@ -133,7 +123,17 @@ async function parseJson(req) {
   return JSON.parse(buffer.toString('utf8') || '{}')
 }
 
-async function sendMail({ name, company, phone, email, message, fileInfo }) {
+function appUrl() {
+  return process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : 'https://vek-site.vercel.app'
+}
+
+function downloadLink(pathname) {
+  return `${appUrl()}/api/download-file?pathname=${encodeURIComponent(pathname)}`
+}
+
+async function sendMail({ name, company, phone, email, message, uploadedFiles }) {
   const to = process.env.REQUEST_EMAIL_TO
   const from = process.env.REQUEST_EMAIL_FROM
   const apiKey = process.env.RESEND_API_KEY
@@ -145,22 +145,29 @@ async function sendMail({ name, company, phone, email, message, fileInfo }) {
     timeZone: 'Europe/Moscow',
   })
 
-  const fileBlock = fileInfo
-    ? [
-        `Название файла: ${fileInfo.name}`,
-        `Размер файла: ${fileInfo.sizeLabel}`,
-        `Ссылка на файл в Vercel Blob: ${fileInfo.url}`,
-        fileInfo.pathname ? `Путь файла: ${fileInfo.pathname}` : '',
-      ]
-        .filter(Boolean)
-        .join('\n')
-    : 'Файл не приложен.'
+  const fileBlock =
+    uploadedFiles.length === 0
+      ? 'Файлы не приложены'
+      : uploadedFiles
+          .map(
+            (file, index) =>
+              [
+                `Файл ${index + 1}`,
+                `Название: ${file.name}`,
+                `Размер: ${file.sizeLabel}`,
+                `Ссылка на скачивание файла: ${file.downloadLink}`,
+                file.pathname ? `Путь файла: ${file.pathname}` : '',
+              ]
+                .filter(Boolean)
+                .join('\n'),
+          )
+          .join('\n\n')
 
   const text = [
     'Заявка на расчёт изготовления детали — сайт ООО ВЕК',
     '',
     `Имя: ${name || '—'}`,
-    company ? `Компания: ${company}` : '',
+    `Компания: ${company || '—'}`,
     `Телефон: ${phone || '—'}`,
     `E-mail: ${email || '—'}`,
     '',
@@ -182,7 +189,11 @@ async function sendMail({ name, company, phone, email, message, fileInfo }) {
     text,
   })
   if (error) {
-    throw new Error(error.message || 'email_send_failed')
+    console.error('send-request: Resend error', {
+      name: error.name,
+      message: error.message ? String(error.message).slice(0, 180) : undefined,
+    })
+    throw new Error('email_send_failed')
   }
 }
 
@@ -205,6 +216,7 @@ export default async function handler(req, res) {
             throw new Error('unsupported_file_type')
           }
           return {
+            access: 'private',
             addRandomSuffix: true,
             maximumSizeInBytes: MAX_FILE_BYTES,
             validUntil: Date.now() + 60 * 60 * 1000,
@@ -221,41 +233,60 @@ export default async function handler(req, res) {
     const phone = clean(formData.get('phone'), 80)
     const email = clean(formData.get('email'), 200)
     const message = clean(formData.get('message') || formData.get('comment'), 4000)
-    const uploaded = formData.get('file')
+    const binaryFiles = [...formData.getAll('files'), ...formData.getAll('file')].filter(
+      (item) => item && typeof item === 'object' && typeof item.arrayBuffer === 'function' && item.size > 0,
+    )
 
-    let fileInfo = null
+    const metaPathnames = formData.getAll('blobPathname').map((item) => clean(item, 400)).filter(Boolean)
+    const metaNames = formData.getAll('fileName').map((item) => clean(item, 180))
+    const metaSizes = formData.getAll('fileSize').map((item) => Number(item) || 0)
 
-    if (uploaded && typeof uploaded === 'object' && typeof uploaded.arrayBuffer === 'function' && uploaded.size > 0) {
-      const originalName = clean(uploaded.name, 180)
-      if (!isAllowedFilename(originalName)) {
-        json(res, 400, { ok: false, error: 'unsupported_file_type' })
-        return
-      }
-      if (uploaded.size > MAX_FILE_BYTES) {
+    const uploadedFiles = []
+
+    if (binaryFiles.length > 0) {
+      const total = binaryFiles.reduce((sum, file) => sum + file.size, 0)
+      if (binaryFiles.length > MAX_FILES || total > MAX_TOTAL_BYTES) {
         json(res, 413, { ok: false, error: 'file_too_large' })
         return
       }
 
-      const blob = await put(`requests/${Date.now()}-${safeBasename(originalName)}`, uploaded, {
-        access: 'private',
-        addRandomSuffix: true,
-        token: process.env.BLOB_READ_WRITE_TOKEN,
-      })
+      for (const uploaded of binaryFiles) {
+        const originalName = clean(uploaded.name, 180)
+        if (!isAllowedFilename(originalName)) {
+          json(res, 400, { ok: false, error: 'unsupported_file_type' })
+          return
+        }
+        if (uploaded.size > MAX_FILE_BYTES) {
+          json(res, 413, { ok: false, error: 'file_too_large' })
+          return
+        }
 
-      fileInfo = {
-        name: originalName,
-        sizeLabel: formatSize(uploaded.size),
-        url: blob.downloadUrl || blob.url,
-        pathname: blob.pathname,
+        const blob = await put(`requests/${Date.now()}-${safeBasename(originalName)}`, uploaded, {
+          access: 'private',
+          addRandomSuffix: true,
+          token: process.env.BLOB_READ_WRITE_TOKEN,
+        })
+
+        uploadedFiles.push({
+          name: originalName,
+          sizeLabel: formatSize(uploaded.size),
+          downloadLink: downloadLink(blob.pathname),
+          pathname: blob.pathname,
+        })
       }
-    } else {
-      const blobUrl = clean(formData.get('blobDownloadUrl') || formData.get('blobUrl'), 1000)
-      const fileName = clean(formData.get('fileName'), 180)
-      const fileSize = Number(formData.get('fileSize') || 0)
-      const pathname = clean(formData.get('blobPathname'), 400)
+    } else if (metaPathnames.length > 0) {
+      const total = metaSizes.reduce((sum, size) => sum + size, 0)
+      if (metaPathnames.length > MAX_FILES || total > MAX_TOTAL_BYTES) {
+        json(res, 413, { ok: false, error: 'file_too_large' })
+        return
+      }
 
-      if (blobUrl) {
-        if (!isVercelBlobUrl(blobUrl) || (fileName && !isAllowedFilename(fileName))) {
+      for (let i = 0; i < metaPathnames.length; i += 1) {
+        const pathname = metaPathnames[i]
+        const fileName = metaNames[i] || 'файл'
+        const fileSize = metaSizes[i] || 0
+
+        if (!pathname.startsWith('requests/') || pathname.includes('..') || (fileName && !isAllowedFilename(fileName))) {
           json(res, 400, { ok: false, error: 'unsupported_file_type' })
           return
         }
@@ -263,16 +294,17 @@ export default async function handler(req, res) {
           json(res, 413, { ok: false, error: 'file_too_large' })
           return
         }
-        fileInfo = {
-          name: fileName || 'файл',
+
+        uploadedFiles.push({
+          name: fileName,
           sizeLabel: formatSize(fileSize),
-          url: blobUrl,
+          downloadLink: downloadLink(pathname),
           pathname,
-        }
+        })
       }
     }
 
-    await sendMail({ name, company, phone, email, message, fileInfo })
+    await sendMail({ name, company, phone, email, message, uploadedFiles })
     json(res, 200, { ok: true })
   } catch (error) {
     const message = String(error?.code || error?.message || '')
@@ -280,7 +312,10 @@ export default async function handler(req, res) {
       json(res, 413, { ok: false, error: 'file_too_large' })
       return
     }
-    console.error('send-request failed')
+    console.error('send-request failed', {
+      name: error?.name,
+      message: message ? String(message).slice(0, 180) : undefined,
+    })
     json(res, 500, { ok: false, error: 'send_failed' })
   }
 }

@@ -3,9 +3,11 @@ import { upload } from '@vercel/blob/client'
 
 const MAILTO = 'ooovek17@gmail.com'
 const MAIL_SUBJECT = 'Заявка на расчёт изготовления детали'
+const MAX_FILES = 10
 const MAX_FILE_BYTES = 30 * 1024 * 1024
-const FILE_TOO_LARGE_TEXT =
-  'Файл слишком большой. Пожалуйста, отправьте документацию напрямую на ooovek17@gmail.com'
+const MAX_TOTAL_BYTES = 100 * 1024 * 1024
+const FILE_LIMITS_TEXT =
+  'Можно прикрепить до 10 файлов. Размер одного файла — до 30 МБ, общий размер — до 100 МБ. Если файлов больше или они тяжелее, отправьте документацию напрямую на e-mail: ooovek17@gmail.com'
 const FORM_ERROR_TEXT =
   'Не удалось отправить заявку через сайт. Пожалуйста, направьте документацию на ooovek17@gmail.com'
 const ALLOWED_FILE_EXT = [
@@ -23,6 +25,40 @@ const ALLOWED_FILE_EXT = [
   '.rar',
   '.7z',
 ]
+const BLOCKED_FILE_EXT = [
+  '.exe',
+  '.js',
+  '.bat',
+  '.cmd',
+  '.scr',
+  '.ps1',
+  '.sh',
+  '.vbs',
+  '.msi',
+  '.html',
+  '.php',
+]
+
+function fileExtension(name) {
+  const base = String(name || '').split(/[/\\]/).pop()
+  const dot = base.lastIndexOf('.')
+  return dot >= 0 ? base.slice(dot).toLowerCase() : ''
+}
+
+function isAllowedUploadName(name) {
+  const ext = fileExtension(name)
+  if (!ext || BLOCKED_FILE_EXT.includes(ext) || !ALLOWED_FILE_EXT.includes(ext)) {
+    return false
+  }
+  const parts = String(name || '')
+    .toLowerCase()
+    .split('.')
+  return !parts.some((part) => BLOCKED_FILE_EXT.includes(`.${part}`))
+}
+
+function formatFileSizeMb(bytes) {
+  return `${(Number(bytes) / (1024 * 1024)).toFixed(1)} МБ`
+}
 const imagePath = (name) => `${import.meta.env.BASE_URL}images/${name}`
 const PRESENTATION_PDF = `${import.meta.env.BASE_URL}presentation/vek-presentation.pdf`
 
@@ -755,6 +791,34 @@ function RequestForm() {
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [selectedFiles, setSelectedFiles] = useState([])
+
+  function inspectFiles(fileList) {
+    const files = Array.from(fileList || []).filter((item) => item instanceof File && item.size >= 0)
+    return files.map((file) => {
+      const allowed = isAllowedUploadName(file.name)
+      const tooBig = file.size > MAX_FILE_BYTES
+      let issue = ''
+      if (!allowed) issue = 'Этот формат нельзя прикрепить.'
+      else if (tooBig) issue = 'Файл больше 30 МБ.'
+      return { file, issue }
+    })
+  }
+
+  function handleFilesChange(event) {
+    setSuccess(false)
+    setError('')
+    const items = inspectFiles(event.target.files)
+    const total = items.reduce((sum, item) => sum + item.file.size, 0)
+    if (
+      items.length > MAX_FILES ||
+      total > MAX_TOTAL_BYTES ||
+      items.some((item) => item.file.size > MAX_FILE_BYTES)
+    ) {
+      setError(FILE_LIMITS_TEXT)
+    }
+    setSelectedFiles(items)
+  }
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -763,37 +827,38 @@ function RequestForm() {
 
     const form = event.currentTarget
     const formData = new FormData(form)
-    const file = formData.get('file')
+    const items = inspectFiles(formData.getAll('files').concat(formData.getAll('file')))
+    const files = items.map((item) => item.file).filter((file) => file.size > 0)
+    const total = files.reduce((sum, file) => sum + file.size, 0)
 
-    if (file instanceof File && file.size > MAX_FILE_BYTES) {
-      setError(FILE_TOO_LARGE_TEXT)
+    if (files.length > MAX_FILES || total > MAX_TOTAL_BYTES || files.some((file) => file.size > MAX_FILE_BYTES)) {
+      setError(FILE_LIMITS_TEXT)
       return
     }
 
-    if (file instanceof File && file.size > 0) {
-      const name = file.name.toLowerCase()
-      const ext = name.includes('.') ? `.${name.split('.').pop()}` : ''
-      if (!ALLOWED_FILE_EXT.includes(ext)) {
-        setError(FORM_ERROR_TEXT)
-        return
-      }
+    if (items.some((item) => item.file.size > 0 && item.issue)) {
+      setError(FORM_ERROR_TEXT)
+      return
     }
 
     setSending(true)
 
     try {
-      if (file instanceof File && file.size > 0) {
+      formData.delete('files')
+      formData.delete('file')
+
+      for (const file of files) {
         const blob = await upload(`requests/${file.name}`, file, {
           access: 'private',
           handleUploadUrl: '/api/send-request',
           multipart: true,
         })
-        formData.set('blobUrl', blob.url)
-        formData.set('blobDownloadUrl', blob.downloadUrl || blob.url)
-        formData.set('blobPathname', blob.pathname || '')
-        formData.set('fileName', file.name)
-        formData.set('fileSize', String(file.size))
-        formData.delete('file')
+        if (!blob.pathname) {
+          throw new Error('upload_failed')
+        }
+        formData.append('blobPathname', blob.pathname)
+        formData.append('fileName', file.name)
+        formData.append('fileSize', String(file.size))
       }
 
       const response = await fetch('/api/send-request', {
@@ -802,7 +867,7 @@ function RequestForm() {
       })
 
       if (response.status === 413) {
-        setError(FILE_TOO_LARGE_TEXT)
+        setError(FILE_LIMITS_TEXT)
         return
       }
 
@@ -813,6 +878,7 @@ function RequestForm() {
       }
 
       form.reset()
+      setSelectedFiles([])
       setSuccess(true)
     } catch {
       setError(FORM_ERROR_TEXT)
@@ -912,20 +978,39 @@ function RequestForm() {
               />
             </label>
             <label className="mt-3.5 block text-sm">
-              <span className="mb-1.5 block font-medium text-graphite-800">Файл</span>
+              <span className="mb-1.5 block font-medium text-graphite-800">Файлы</span>
               <p className="mb-1.5 text-sm leading-relaxed text-steel-500">
-                Прикрепите чертёж, КД, ТЗ или архив для расчёта.
+                Прикрепите чертёж, КД, ТЗ, 3D-модель или архив для расчёта.
               </p>
               <input
-                name="file"
+                name="files"
                 type="file"
+                multiple
                 accept=".pdf,.dwg,.dxf,.step,.stp,.iges,.igs,.jpg,.jpeg,.png,.zip,.rar,.7z"
                 className={fieldClass}
+                onChange={handleFilesChange}
               />
+              {selectedFiles.length > 0 ? (
+                <ul className="mt-2 space-y-1.5">
+                  {selectedFiles.map((item) => (
+                    <li
+                      key={`${item.file.name}-${item.file.size}-${item.file.lastModified}`}
+                      className="text-xs leading-relaxed text-steel-500"
+                    >
+                      <span className="font-medium text-graphite-800">{item.file.name}</span>
+                      {' · '}
+                      {formatFileSizeMb(item.file.size)}
+                      {item.issue ? (
+                        <span className="mt-0.5 block text-graphite-800">{item.issue}</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               <p className="mt-1.5 text-xs leading-relaxed text-steel-400">
-                PDF, DWG, DXF, STEP, STP, IGES, JPG, PNG, ZIP, RAR, 7Z. Если файл не
-                прикрепляется, отправьте документацию напрямую на e-mail:{' '}
-                {MAILTO}
+                Можно прикрепить до 10 файлов: PDF, DWG, DXF, STEP, STP, IGES, JPG, PNG,
+                ZIP, RAR, 7Z. Один файл — до 30 МБ, общий размер — до 100 МБ. Если файлы
+                не прикрепляются, отправьте документацию напрямую на e-mail: {MAILTO}
               </p>
             </label>
             <div className="mt-5 flex flex-col gap-2">

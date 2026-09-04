@@ -2,6 +2,9 @@
   "functions": {
     "api/send-request.js": {
       "maxDuration": 30
+    },
+    "api/download-file.js": {
+      "maxDuration": 30
     }
   }
 }
