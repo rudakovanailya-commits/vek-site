@@ -241,9 +241,15 @@ async function sendMail({ name, company, phone, email, message, uploadedFiles })
   const { error } = await resend.emails.send({
     from,
     to,
-    subject: 'Заявка на расчёт изготовления детали — сайт ООО ВЕК',
+    subject: '[ЗАЯВКА С САЙТА] Расчёт изготовления детали — ООО ВЕК',
     text,
     html,
+    headers: {
+      Importance: 'high',
+      'X-Priority': '1',
+      'X-MSMail-Priority': 'High',
+      Priority: 'urgent',
+    },
   })
   if (error) {
     console.error('send-request: Resend error', {
