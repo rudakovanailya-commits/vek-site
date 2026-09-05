@@ -405,6 +405,51 @@
   animation: request-progress-draw 720ms 80ms ease-out forwards;
 }
 
+.back-to-top {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 5.75rem;
+  z-index: 40;
+  display: inline-flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.35rem;
+  background: #1e5aa8;
+  color: #ffffff;
+  font-size: 1.2rem;
+  line-height: 1;
+  box-shadow: 0 8px 20px rgba(30, 90, 168, 0.38);
+  transition:
+    background-color 200ms ease,
+    box-shadow 200ms ease,
+    transform 200ms ease;
+  animation: request-fade-up 280ms ease-out both;
+}
+
+.back-to-top:hover {
+  background: #174985;
+  box-shadow: 0 12px 26px rgba(30, 90, 168, 0.5);
+  transform: translateY(-2px);
+}
+
+.back-to-top:focus-visible {
+  outline: 2px solid #2b6bc4;
+  outline-offset: 3px;
+}
+
+@media (min-width: 1024px) {
+  .back-to-top {
+    right: 1.5rem;
+    bottom: 1.75rem;
+    height: 3rem;
+    width: 3rem;
+    font-size: 1.3rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -418,7 +463,8 @@
   .request-wait-art,
   .request-aside-art,
   .request-route-line,
-  .request-progress-fill {
+  .request-progress-fill,
+  .back-to-top {
     animation: none !important;
   }
 
@@ -443,13 +489,15 @@
   .btn-primary,
   .btn-secondary,
   .card-lift,
-  .logo-img {
+  .logo-img,
+  .back-to-top {
     transition: none !important;
   }
 
   .btn-primary:hover,
   .btn-secondary:hover,
-  .card-lift:hover {
+  .card-lift:hover,
+  .back-to-top:hover {
     transform: none;
   }
 }

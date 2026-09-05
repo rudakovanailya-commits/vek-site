@@ -1,7 +1,9 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { upload } from '@vercel/blob/client'
 
 const MAX_FILES = 10
+const PHONE_HREF = 'tel:+79117778191'
+const PHONE_LABEL = '8 (911) 777-81-91'
 const MAX_FILE_BYTES = 30 * 1024 * 1024
 const MAX_TOTAL_BYTES = 100 * 1024 * 1024
 const FILE_LIMITS_TEXT =
@@ -247,7 +249,7 @@ const processSteps = [
 const contactItems = [
   { label: 'Компания', value: 'ООО «ВЕК»' },
   { label: 'Город', value: 'Санкт-Петербург' },
-  { label: 'Телефон', value: '8 (911) 777-81-91' },
+  { label: 'Телефон', value: '8 (911) 777-81-91', href: 'tel:+79117778191' },
   { label: 'E-mail', value: 'ooovek17@gmail.com' },
   {
     label: 'Адрес',
@@ -368,7 +370,14 @@ function Header() {
           ))}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <a
+            href={PHONE_HREF}
+            className="inline-flex items-center rounded-sm px-2 py-2 text-xs font-medium text-[#C7D0DA] transition-colors hover:text-white sm:px-0 sm:text-sm lg:text-[15px]"
+          >
+            <span className="sm:hidden">Позвонить</span>
+            <span className="hidden sm:inline">{PHONE_LABEL}</span>
+          </a>
           <a
             href="#request"
             className="btn-primary hidden whitespace-nowrap rounded-sm bg-accent px-4 py-2.5 text-base font-medium text-white hover:bg-accent-hover lg:inline-flex"
@@ -409,6 +418,13 @@ function Header() {
                 {item.label}
               </a>
             ))}
+            <a
+              href={PHONE_HREF}
+              className="mt-1 rounded-sm px-2 py-2.5 text-base font-medium text-[#C7D0DA] hover:bg-white/5 hover:text-white"
+              onClick={closeMenu}
+            >
+              {PHONE_LABEL}
+            </a>
             <a
               href="#request"
               className="btn-primary mt-2 rounded-sm bg-accent px-3 py-2.5 text-center text-sm font-medium text-white hover:bg-accent-hover"
@@ -1303,7 +1319,16 @@ function Contacts() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-steel-400">
                 {item.label}
               </p>
-              <p className="mt-1.5 text-sm font-medium text-graphite-900">{item.value}</p>
+              {item.href ? (
+                <a
+                  href={item.href}
+                  className="mt-1.5 inline-block text-sm font-medium text-graphite-900 transition-colors hover:text-accent"
+                >
+                  {item.value}
+                </a>
+              ) : (
+                <p className="mt-1.5 text-sm font-medium text-graphite-900">{item.value}</p>
+              )}
             </div>
           ))}
         </div>
@@ -1320,6 +1345,28 @@ function Footer() {
         <p className="text-sm">Механическая обработка деталей по КД заказчика</p>
       </Container>
     </footer>
+  )
+}
+
+function BackToTop() {
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    function onScroll() {
+      setVisible(window.scrollY > 420)
+    }
+
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  if (!visible) return null
+
+  return (
+    <a href="#top" className="back-to-top" aria-label="Наверх">
+      ↑
+    </a>
   )
 }
 
@@ -1340,6 +1387,7 @@ export default function App() {
         <Contacts />
       </main>
       <Footer />
+      <BackToTop />
     </div>
   )
 }
