@@ -168,6 +168,7 @@ function assertNoBlobUrl(value) {
 async function sendMail({ name, company, phone, email, message, uploadedFiles }) {
   const to = process.env.REQUEST_EMAIL_TO
   const from = process.env.REQUEST_EMAIL_FROM
+  const bcc = String(process.env.REQUEST_EMAIL_BCC || '').trim()
   const apiKey = process.env.RESEND_API_KEY
   if (!to || !from || !apiKey) {
     throw new Error('email_not_configured')
@@ -241,6 +242,7 @@ async function sendMail({ name, company, phone, email, message, uploadedFiles })
   const { error } = await resend.emails.send({
     from,
     to,
+    ...(bcc ? { bcc } : {}),
     subject: '[ЗАЯВКА С САЙТА] Расчёт изготовления детали — ООО ВЕК',
     text,
     html,
