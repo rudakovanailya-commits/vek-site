@@ -1364,9 +1364,14 @@ function BackToTop() {
   if (!visible) return null
 
   return (
-    <a href="#top" className="back-to-top" aria-label="Наверх">
+    <button
+      type="button"
+      className="back-to-top"
+      aria-label="Наверх"
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+    >
       ↑
-    </a>
+    </button>
   )
 }
 
