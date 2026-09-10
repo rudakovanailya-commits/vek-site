@@ -12,6 +12,7 @@ export const config = {
 const MAX_FILE_BYTES = 30 * 1024 * 1024
 const MAX_TOTAL_BYTES = 100 * 1024 * 1024
 const MAX_FILES = 10
+const MIN_FORM_FILL_MS = 3000
 const ALLOWED_EXT = new Set([
   '.pdf',
   '.dwg',
@@ -262,6 +263,17 @@ async function sendMail({ name, company, phone, email, message, uploadedFiles })
   }
 }
 
+function isSuspiciousForm(formData) {
+  const honeypot = clean(formData.get('website'), 200)
+  if (honeypot) return true
+
+  const startedAt = Number(formData.get('formStartedAt'))
+  if (!Number.isFinite(startedAt) || startedAt <= 0) return true
+
+  const elapsed = Date.now() - startedAt
+  return elapsed >= 0 && elapsed < MIN_FORM_FILL_MS
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     json(res, 405, { ok: false, error: 'method_not_allowed' })
@@ -293,6 +305,11 @@ export default async function handler(req, res) {
     }
 
     const formData = await parseFormData(req)
+    if (isSuspiciousForm(formData)) {
+      json(res, 200, { ok: true })
+      return
+    }
+
     const name = clean(formData.get('name'), 200)
     const company = clean(formData.get('company'), 200)
     const phone = clean(formData.get('phone'), 80)

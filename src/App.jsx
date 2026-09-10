@@ -921,6 +921,7 @@ function RequestForm() {
   const [fileError, setFileError] = useState('')
   const [formKey, setFormKey] = useState(0)
   const fileInputRef = useRef(null)
+  const formStartedAtRef = useRef(Date.now())
 
   function handleFileChange(event) {
     const input = event.target
@@ -970,6 +971,7 @@ function RequestForm() {
     const formData = new FormData(form)
     formData.delete('files')
     formData.delete('file')
+    formData.set('formStartedAt', String(formStartedAtRef.current))
     files.forEach((file) => {
       formData.append('files', file)
     })
@@ -993,18 +995,21 @@ function RequestForm() {
       formData.delete('files')
       formData.delete('file')
 
-      for (const file of attached) {
-        const blob = await upload(`requests/${file.name}`, file, {
-          access: 'private',
-          handleUploadUrl: '/api/send-request',
-          multipart: true,
-        })
-        if (!blob.pathname) {
-          throw new Error('upload_failed')
+      const honeypot = String(formData.get('website') || '').trim()
+      if (!honeypot) {
+        for (const file of attached) {
+          const blob = await upload(`requests/${file.name}`, file, {
+            access: 'private',
+            handleUploadUrl: '/api/send-request',
+            multipart: true,
+          })
+          if (!blob.pathname) {
+            throw new Error('upload_failed')
+          }
+          formData.append('blobPathname', blob.pathname)
+          formData.append('fileName', file.name)
+          formData.append('fileSize', String(file.size))
         }
-        formData.append('blobPathname', blob.pathname)
-        formData.append('fileName', file.name)
-        formData.append('fileSize', String(file.size))
       }
 
       const response = await fetch('/api/send-request', {
@@ -1041,6 +1046,7 @@ function RequestForm() {
     setFileError('')
     setFiles([])
     setFormKey((key) => key + 1)
+    formStartedAtRef.current = Date.now()
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -1152,6 +1158,16 @@ function RequestForm() {
             className="border border-steel-200 bg-white p-5 shadow-card sm:p-6"
             onSubmit={handleSubmit}
           >
+            <div className="sr-only" aria-hidden="true">
+              <label htmlFor="request-website">Website</label>
+              <input
+                id="request-website"
+                name="website"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+              />
+            </div>
             <div className="grid gap-3.5 sm:grid-cols-2">
               <label className="block text-sm">
                 <span className="mb-1.5 block font-medium text-graphite-800">Имя</span>
